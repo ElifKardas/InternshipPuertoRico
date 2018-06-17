@@ -1,0 +1,146 @@
+#####################################################################
+
+# Elif KARDAS - June 17th 2018
+# Interamerican University of PR
+
+#####################################################################
+
+##################################################################
+#                                                                #
+#   ANALYSE FACTORIELLE DE CORRESPONDANCE (AFC) sur Mosquitoes   #
+#                                                                #
+##################################################################
+
+#####################################
+# 1. AFC sur les donnees brutes     #
+#####################################
+
+# PACKAGES ET LIBRAIRIE:
+
+#install.packages("ade4")
+library(ade4)
+
+# CHARGEMENT DU JEU DE DONNEES :
+
+getwd() 
+### me donne le chemin pour trouver le rpertoire de travail (dossier ac mon jeu de donnees)
+setwd("C:/Users/Kardas/Desktop") 
+### permet de fixer le chemin exact pour arriver a mon dossier
+files <- dir()
+dir() 
+### permet de trouver le numero de dossier contenu dans mon repertoire de travail
+
+mousq<-read.table(files[15], sep=";", dec=",",header=TRUE)
+
+# AFC :
+
+## Creation de la table de contingence liee a "mousq"
+mosaicplot(mousq, main="Table de contingence",color=rainbow(nrow(mousq)), las=1)
+
+## Utilisation de la fct dudi.coa sur le jeu de donnees mousq, qui permet de faire une analyse de correspondance qu'on nomme 'AFC'
+AFC<-dudi.coa(mousq)
+2
+### Definition du nombre d'axes a 2 au vu de l'allure du graphique
+
+## On verifie avec un petit resume de l'AFC si choisir 2 axes etait judicieux:
+summary(AFC)
+
+## Representation du jeu de donnees selon le nouveau referentiel constitue de 2 axes 
+scatter(AFC)
+### Represente toutes les donnees selon toutes variables, en tenant compte des eigenvalues
+
+## Definition de la part d'inertie expliquee par chaque axe
+AFC$eig*100/sum(AFC$eig)
+
+############# (): Pour visualiser 2 graphes en meme temps
+def.par <- par(no.readonly = TRUE)
+division_matrix <- matrix(c(1,2), 1, 2, byrow = TRUE)
+layout(division_matrix)
+#############
+
+## Coordonnees des premieres colonnes (especes) dans le nv referentiel
+head(AFC$co) 
+# co	= the column coordinates, cad les coordonnees des especes de poisson dans le nv referentiel
+
+## Representation vectorielle des sp de poisson dans le nouveau referentiel via la fct s.arrow
+s.arrow(AFC$co, xax = 1, yax = 2, clabel=0)
+### ou AFC$co prend les coordonnees des especes dans le nv referentiel
+### ou 'xax=1' et 'yax=2' se referent respectivement a l'axe 1 etant l'abcisse, et l'axe 2 etant l'ordonnee
+### Mettre les vecteurs montre si l'espece est bien comprise dans le plan ou non
+### On met un vecteur quand c'est la valeur expliquee
+
+## Coordonnees des premieres lignes (sites) dans le nv referentiel
+head(AFC$li)
+# li	= the row coordinates, cad les coordonnees des sites dans le nv referentiel 
+
+## Representation vectorielle des sites dans le nouveau referentiel via la fct s.label
+s.label(AFC$li, xax = 1, yax = 2, clabel=0.7)
+### ou AFC$li prend les coordonnees des sites dans le nv referentiel
+### ou 'xax=1' et 'yax=2' se referent respectivement a l'axe 1 etant l'abcisse, et l'axe 2 etant l'ordonnee
+### ici on met pas de vecteur (s.arrow) pcq c'est un site et donc ea n'a pas de sens de regarder sa projection dans le plan
+
+
+
+#####################################
+#    2. Selection de variables      #
+#####################################
+
+# PACKAGES ET LIBRAIRIE :
+
+#install.packages("corrplot")
+library(corrplot)
+### Installation du package "corrplot"
+### chargement de la librairie "corrplot" contenant les fct utiles pour les analyses de correlation
+
+## Etablissement de la matrice de correlation de mousq, les sp en fct de la station
+cormatrix<-cor(mousq)
+
+## Representation de l'abondance des sp les unes par rapport aux autres
+corrplot(cormatrix, tl.cex=0.5)
+### ou cormatrix est la matrice de correlation qu'on vient de faire
+### ou t1.cex=0.5 est la taille du texte de noms de variables
+### la diagonale represente toutes les valeurs de 1 (tres fortement correlees)
+### cette matrice permet, via les couleurs, de voir les variables qui sont correlees
+
+## Calcul des valeurs de correlation moyennes
+meancor<-apply(cormatrix, 1, mean)
+
+## Recherche du max des valeurs de correlations moyennes
+max(meancor)
+
+## Recherche de celui qui a cette valeur max
+meancor[which(meancor==max(meancor))]
+
+temoin<-names(meancor)[which(meancor==max(meancor))]
+### on fixe BOU comme la reference des sp pour diminuer le nb de variables 
+fortementcor<-which(cormatrix[,temoin]>0.80)
+### on fixe toutes les valeurs au-dessus de 0.8 comme celles etant 
+### tres correlees entre elles. Donc on essaie de + en + de diminuer le nb d'sp pr simplifier les donnees
+
+mousqSimplifie<-mousq[,-fortementcor]
+### on cree ac le nouveau set de donnees simplifiees
+mousqSimplifie<-cbind(mousqSimplifie, mousq$A.mediovittatus)
+### on combine toutes les colonnes tres fortement correlees 
+colnames(mousqSimplifie)[ncol(mousqSimplifie)]<-"A.mediovittatus"
+
+ncol(mousq)
+### donne le nb de colonnes quand le set de donnees est complet
+ncol(mousqSimplifie)
+### donne le nb de colonnes quand le set de donnees est simplifie
+
+#####################################
+#   3. AFC sur donnees simplifiees  #
+#####################################
+
+AFCS<-dudi.coa(mousqSimplifie)
+2
+scatter(AFCS)
+
+AFCS$eig*100/sum(AFC$eig)
+summary(AFCS)
+
+head(AFCS$co)
+s.arrow(AFCS$co, clabel=0.7)
+
+head(AFCS$li)
+s.label(AFCS$li, clabel=0.6)
